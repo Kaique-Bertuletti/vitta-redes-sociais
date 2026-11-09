@@ -1,12 +1,15 @@
-export async function GET() {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const id = process.env.INSTAGRAM_ACCOUNT_ID;
+import { carregarPainel, lerPeriodo, ErroInstagram } from "../../../lib/instagram";
 
-  const url =
-    `https://graph.facebook.com/v27.0/${id}/insights` +
-    `?metric=reach,views,accounts_engaged,total_interactions` +
-    `&metric_type=total_value&period=day&access_token=${token}`;
+export const maxDuration = 60;
 
-  const res = await fetch(url, { cache: "no-store" });
-  return Response.json(await res.json());
+// Mesmos dados do painel em formato JSON. Aceita ?dias=7|30|90 ou ?de=AAAA-MM-DD&ate=AAAA-MM-DD.
+export async function GET(request: Request) {
+  const params = Object.fromEntries(new URL(request.url).searchParams);
+  try {
+    const painel = await carregarPainel(lerPeriodo(params));
+    return Response.json(painel);
+  } catch (e) {
+    const erro = e instanceof ErroInstagram ? e.message : "Erro inesperado ao buscar os dados.";
+    return Response.json({ erro }, { status: 502 });
+  }
 }
