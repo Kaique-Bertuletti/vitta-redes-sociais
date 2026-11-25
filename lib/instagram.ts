@@ -102,8 +102,8 @@ function periodoAnterior(p: Periodo): Periodo {
 // ---------- chamadas à API ----------
 
 function credenciais() {
-  const token = process.env.INSTAGRAM_ACCESS_TOKEN;
-  const conta = process.env.INSTAGRAM_ACCOUNT_ID;
+  const token = (process.env.VERCEL_ENV === "preview" ? process.env.INSTAGRAM_PREVIEW_ACCESS_TOKEN : process.env.INSTAGRAM_ACCESS_TOKEN)?.trim();
+  const conta = process.env.INSTAGRAM_ACCOUNT_ID?.trim();
   if (!token || !conta) {
     throw new ErroInstagram(
       "As variáveis INSTAGRAM_ACCESS_TOKEN e INSTAGRAM_ACCOUNT_ID não estão configuradas na Vercel."
@@ -126,7 +126,7 @@ async function chamar<T>(caminho: string, params: Record<string, string>, revali
   });
   const json = (await res.json()) as T & RespostaErro;
   if (!res.ok || json.error) {
-    throw new ErroInstagram(json.error?.message ?? `A API da Meta respondeu com erro ${res.status}.`);
+    throw new ErroInstagram(`A API da Meta respondeu com erro ${res.status}.`);
   }
   return json;
 }
