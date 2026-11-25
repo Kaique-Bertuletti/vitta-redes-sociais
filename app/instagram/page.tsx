@@ -240,6 +240,25 @@ async function Conteudo({ searchParams }: Props) {
         </section>
 
         <section className="painel">
+          <h2>Crescimento de seguidores</h2>
+          <p className="nota">Dados da Meta · mesmo período selecionado acima. Traço indica dados indisponíveis.</p>
+          <div className="hub-grid">
+            {([['Seguidores ganhos', 'ganhos'], ['Seguidores perdidos', 'perdas'], ['Crescimento líquido', 'liquido']] as const).map(([rotulo, chave]) => {
+              const atual = painel.crescimento.atual?.[chave];
+              const anterior = painel.crescimento.anterior?.[chave];
+              const delta = atual !== undefined && anterior !== undefined ? atual - anterior : null;
+              return <div className="hub-card" key={chave}>{rotulo}<strong>{atual === undefined ? '—' : (chave === 'liquido' && atual > 0 ? '+' : '') + numero.format(atual)}</strong><p className="nota">{anterior === undefined ? 'Período anterior indisponível' : `Anterior: ${numero.format(anterior)}`}{delta !== null ? ` · Diferença: ${delta > 0 ? '+' : ''}${numero.format(delta)}` : ''}{chave !== 'liquido' && delta !== null && anterior ? ` (${porcento.format(delta/anterior)})` : ''}</p></div>;
+            })}
+          </div>
+          <h3>Evolução de seguidores por {painel.periodo.dias <= 7 ? 'dia' : 'blocos de até 7 dias'}</h3>
+          <p className="nota">Azul: ganhos · amarelo: perdas. Intervalos sem resposta completa não são estimados.</p>
+          <div className="growth-chart">{painel.crescimento.serie.map(f => {
+            const max = Math.max(1, ...painel.crescimento.serie.map(x => Math.max(x.valor?.ganhos ?? 0, x.valor?.perdas ?? 0)));
+            return <div key={f.de} className="growth-row"><span>{f.de.slice(8)}/{f.de.slice(5,7)} – {f.ate.slice(8)}/{f.ate.slice(5,7)}</span>{f.valor ? <div><div className="growth-track"><span style={{width: `${100*f.valor.ganhos/max}%`,background:'#0071b4'}}/><b>{numero.format(f.valor.ganhos)}</b></div><div className="growth-track"><span style={{width: `${100*f.valor.perdas/max}%`,background:'#d1b400'}}/><b>{numero.format(f.valor.perdas)}</b></div></div> : <span>Indisponível</span>}</div>;
+          })}</div>
+        </section>
+
+        <section className="painel">
           <h2>Visualizações e alcance por dia</h2>
           <GraficoDiario
             dias={serie}

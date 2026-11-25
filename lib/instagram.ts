@@ -36,7 +36,10 @@ export type Post = {
 
 export type Periodo = { de: string; ate: string; dias: number };
 
+export type Crescimento = { ganhos: number; perdas: number; liquido: number };
+export type FaixaCrescimento = { de: string; ate: string; valor: Crescimento | null };
 export type Painel = {
+  crescimento: { atual: Crescimento | null; anterior: Crescimento | null; serie: FaixaCrescimento[] };
   periodo: Periodo;
   anterior: Periodo;
   perfil: Perfil;
@@ -296,17 +299,59 @@ async function postsDoPeriodo(p: Periodo): Promise<{ posts: Post[]; total: numbe
   return { posts, total: encontrados.length };
 }
 
+// Cada consulta usa um intervalo sem sobreposicao. Ausencia de categoria nao vira zero.
+async function seguidoresEntre(de: string, ate: string): Promise<Crescimento | null> {
+  try {
+    const { conta } = credenciais();
+    const desde = inicioDoDia(de);
+    const fim = Math.min(inicioDoDia(somarDias(ate, 1)), Math.floor(Date.now()/1000));
+    if (fim <= desde) return null;
+    type Linha = { dimension_values?: string[]; value?: number };
+    const json = await chamar<{ data?: { name: string; total_value?: { breakdowns?: { dimension_keys?: string[]; results?: Linha[] }[] } }[] }>(`${conta}/insights`, {
+      metric: "follows_and_unfollows", metric_type: "total_value", period: "day", breakdown: "follow_type",
+      since: String(desde), until: String(fim),
+    }, ate === hojeEmSaoPaulo() ? 900 : 3600);
+    const linhas = json.data?.find(x => x.name === "follows_and_unfollows")?.total_value?.breakdowns?.find(x => x.dimension_keys?.[0] === "follow_type")?.results;
+    const ganhos = linhas?.find(x => x.dimension_values?.[0] === "FOLLOWER")?.value;
+    const perdas = linhas?.find(x => x.dimension_values?.[0] === "NON_FOLLOWER")?.value;
+    if (typeof ganhos !== "number" || typeof perdas !== "number" || !Number.isFinite(ganhos) || !Number.isFinite(perdas) || ganhos < 0 || perdas < 0) return null;
+    return { ganhos, perdas, liquido: ganhos - perdas };
+  } catch { return null; }
+}
+function faixas(p: Periodo, tamanho: number): {de:string;ate:string}[] {
+  const saida = [];
+  for (let de = p.de; de <= p.ate; de = somarDias(de, tamanho)) {
+    const fim = somarDias(de, tamanho - 1);
+    saida.push({ de, ate: fim < p.ate ? fim : p.ate });
+  }
+  return saida;
+}
+async function crescimentoPeriodo(p: Periodo): Promise<Crescimento | null> {
+  const partes = await emLotes(faixas(p, 30), 3, x => seguidoresEntre(x.de, x.ate));
+  if (!partes.length || partes.some(x => x === null)) return null;
+  return partes.reduce<Crescimento>((a, x) => ({ ganhos: a.ganhos + x!.ganhos, perdas: a.perdas + x!.perdas, liquido: a.liquido + x!.liquido }), { ganhos: 0, perdas: 0, liquido: 0 });
+}
+async function crescimentoPainel(p: Periodo, anterior: Periodo) {
+  const [atual, passado, serie] = await Promise.all([
+    crescimentoPeriodo(p), crescimentoPeriodo(anterior),
+    emLotes(faixas(p, p.dias <= 7 ? 1 : 7), 3, async x => ({...x, valor: await seguidoresEntre(x.de, x.ate)})),
+  ]);
+  return { atual, anterior: passado, serie };
+}
+
 export async function carregarPainel(p: Periodo): Promise<Painel> {
   const anterior = periodoAnterior(p);
-  const [dadosPerfil, serie, atual, passado, posts] = await Promise.all([
+  const [dadosPerfil, serie, atual, passado, posts, crescimento] = await Promise.all([
     perfil(),
     serieDiaria(p),
     totaisDoPeriodo(p),
     totaisDoPeriodo(anterior),
     postsDoPeriodo(p),
+    crescimentoPainel(p, anterior),
   ]);
   return {
     periodo: p,
+    crescimento,
     anterior,
     perfil: dadosPerfil,
     totais: atual.totais,
