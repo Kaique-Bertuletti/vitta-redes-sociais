@@ -5,7 +5,7 @@ import "./hub.css";
 import { Navigation } from "./navigation";
 
 export const metadata: Metadata = {
-  title: "Vitta Marketing Hub 2.3",
+  title: "Vitta Marketing Hub 2.4",
   description: "Desempenho do Instagram @vittaemsaopaulo",
   robots: { index: false, follow: false },
 };
