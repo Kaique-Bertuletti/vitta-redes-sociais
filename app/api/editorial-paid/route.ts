@@ -1,3 +1,4 @@
+import {identity,reply as deniedReply} from '../_shared/security';
 export const dynamic='force-dynamic';
 export const maxDuration=60;
 const base='https://graph.facebook.com/v27.0/';
@@ -5,7 +6,8 @@ const base='https://graph.facebook.com/v27.0/';
 const ids=['120252688952160104','120252688877340104','120252688840280104','120252688774750104','120252688727880104','120252688708470104','120252688671230104','120252673269370104'];
 type Row=Record<string,unknown>;
 const num=(x:unknown)=>((typeof x==='number'||typeof x==='string'&&x.trim()!=='')&&Number.isFinite(Number(x)))?Number(x):null;
-export async function GET(){
+export async function GET(req:Request){
+ if(!await identity(req))return deniedReply({error:"Acesso não autorizado"},401);
  const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
  if(process.env.VERCEL_ENV==='production')return reply({error:'Somente Preview.'},403);
  const token=process.env.META_ADS_ACCESS_TOKEN?.trim(),account=process.env.META_AD_ACCOUNT_ID?.trim();

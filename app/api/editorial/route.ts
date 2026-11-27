@@ -1,9 +1,11 @@
+import {identity,reply as deniedReply} from '../_shared/security';
 import { NextResponse } from 'next/server';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 type Media = {is_shared_to_feed?:boolean;id:string;caption?:string;media_type?:string;media_product_type?:string;media_url?:string;thumbnail_url?:string;permalink?:string;timestamp?:string};
 type GraphPage = {data?:Media[];paging?:{next?:string;cursors?:{after?:string}};error?:{code?:number}};
-export async function GET(){
+export async function GET(req:Request){
+ if(!await identity(req))return deniedReply({error:"Acesso não autorizado"},401);
  const token=(process.env.VERCEL_ENV==='preview'?process.env.INSTAGRAM_PREVIEW_ACCESS_TOKEN:process.env.INSTAGRAM_ACCESS_TOKEN)?.trim();
  const account=process.env.INSTAGRAM_ACCOUNT_ID?.trim();
  const headers={'Cache-Control':'private, no-store'};

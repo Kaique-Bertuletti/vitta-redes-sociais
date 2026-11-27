@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useState,type FormEvent,type ReactNode} from 'react';
+export function EditorialAccess({children}:{children:(role:string)=>ReactNode}){
+ const [role,setRole]=useState(''),[ready,setReady]=useState(false),[email,setEmail]=useState(''),[password,setPassword]=useState(''),[error,setError]=useState(''),[busy,setBusy]=useState(false);
+ useEffect(()=>{fetch('/api/editorial-login',{cache:'no-store'}).then(async r=>{if(r.ok)setRole((await r.json()).role)}).catch(()=>setError('Não foi possível verificar a sessão.')).finally(()=>setReady(true))},[]);
+ async function login(e:FormEvent){e.preventDefault();setBusy(true);setError('');try{const r=await fetch('/api/editorial-login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});const j=await r.json();if(!r.ok)throw Error(j.error);setRole(j.role)}catch(e){setError(e instanceof Error?e.message:'Falha de acesso')}finally{setPassword('');setBusy(false)}}
+ if(!ready)return <main className="hub-main">Verificando acesso…</main>;
+ if(!role)return <main className="hub-main"><header><h1>Calendário editorial</h1>Vitta São Paulo · acesso restrito</header><section className="hub-panel"><form onSubmit={login}><h2>Entrar</h2><label>E-mail <input required type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)}/></label><label>Senha <input required type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)}/></label><button disabled={busy}>{busy?'Entrando…':'Entrar'}</button>{error&&<p role="alert">{error}</p>}</form><p>Use a conta autorizada pelo administrador. A sessão dura até uma hora; entre novamente quando necessário.</p></section></main>;
+ return <><div className="hub-tools" style={{padding:'12px 24px'}}><span>Editorial · {role}</span><button className="secondary" onClick={async()=>{const r=await fetch('/api/editorial-login',{method:'DELETE'});if(r.ok){setRole('');window.location.reload()}else setError('Não foi possível sair.')}}>Sair</button>{error&&<span>{error}</span>}</div>{children(role)}</>;
+}

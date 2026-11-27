@@ -1,3 +1,4 @@
+import {identity,reply as deniedReply} from '../_shared/security';
 export const dynamic='force-dynamic';
 export const maxDuration=30;
 const base='https://graph.facebook.com/v27.0/';
@@ -5,6 +6,7 @@ const metrics=['views','reach','likes','comments','shares','saved','total_intera
 type Row=Record<string,unknown>;
 const num=(x:unknown):number|null=>typeof x==='number'&&Number.isFinite(x)?x:null;
 export async function GET(req:Request){
+ if(!await identity(req))return deniedReply({error:"Acesso não autorizado"},401);
  const reply=(data:unknown,status=200)=>Response.json(data,{status,headers:{'Cache-Control':'private, no-store'}});
  if(process.env.VERCEL_ENV==='production')return reply({error:'Somente Preview.'},403);
  const token=process.env.INSTAGRAM_PREVIEW_ACCESS_TOKEN?.trim(), account=process.env.INSTAGRAM_ACCOUNT_ID?.trim();
