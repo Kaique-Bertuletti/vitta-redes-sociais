@@ -1,2 +1,2 @@
-import Hub from '../hub';
-export default function Page(){return <Hub mode="leads"/>}
+import OrganicLeads from './organic-leads';
+export default function Page(){return <OrganicLeads/>}
