@@ -1,2 +1,3 @@
-import Hub from '../hub';
-export default function Page(){return <Hub mode="pubs"/>}
+import Editorial from './editorial';
+import './editorial.css';
+export default function Page(){return <Editorial/>}
